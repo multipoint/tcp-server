@@ -2,12 +2,14 @@ const net = require('net');
 const convert = require('xml-js');
 
 // config vars for automation system TCP connection
-let port = 9001;
-let ip = "127.0.0.1";
+// wide orbit 
+let port = 11112;
+let ip = "10.150.54.202";
 
 // config vars for streaming audio device connection
-let streamingPort = 9001,
-		streamingIp = "127.0.0.1";
+
+let streamingPort = 21117,
+		streamingIp = "10.150.55.108";
 
 // create initial client for connecting to automation system and listening for XML
 const client = new net.Socket();
@@ -64,22 +66,13 @@ function handleConnection(conn) {
 					streamingClient.write(url);	
 					streamingClient.destroy();
 				});
-			} 
+			}
 			catch(error) {
 				console.log(error);
-			}
+			};
     }
 		catch(error) {
       console.log(error);
     }
 	}
 }
-
-// client.on('data', function(data) {
-// 	console.log('Received: ' + data);
-// 	// client.destroy(); // kill client after server's response
-// });
-
-// client.on('close', function() {
-// 	console.log('Connection closed');
-// });
