@@ -26,13 +26,13 @@ let ip = "10.150.54.202";
 let streamingPort = 21117,
 		streamingIp = "10.150.55.108";
 
-		//inside network
+//inside network
 let internalJumpUrl = 'http://10.150.55.212/live.json';
 
-// create initial client for connecting to automation system and listening for XML
+//create initial client for connecting to automation system and listening for XML
 const client = new net.Socket();
 
-client.connect(testPort, testIp, function() {
+client.connect(port, ip, function() {
 	console.log('Automation client connected.')
 	handleConnection(client);
 });
@@ -79,7 +79,7 @@ function handleConnection(conn) {
 					if (durationInSeconds <= 10 && category == 'IM2') {
 						console.log('duration is less than or equal to 10 seconds');
 						console.log('requesting data');
-						request(externalJumpUrl, function(error, response, body) {
+						request(internalJumpUrl, function(error, response, body) {
 							if (error) {
 								console.error(error);
 							}
@@ -98,8 +98,8 @@ function handleConnection(conn) {
 								const streamingClient = new net.Socket();
 								try {
 									console.log('connecting to streaming client');
-									// streamingClient.connect(streamingPort, streamingIp, function() {
-										streamingClient.connect(portPeekerPort, portPeekerIp, function() {
+									streamingClient.connect(streamingPort, streamingIp, function() {
+										// streamingClient.connect(portPeekerPort, portPeekerIp, function() {
 										console.log("Attemping to send URL to streaming device..."); 
 										streamingClient.write(url);
 										console.log('successfully wrote to the client');
