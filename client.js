@@ -1,5 +1,6 @@
 const net = require('net');
 const convert = require('xml-js');
+const request = require('request');
 
 // config vars for automation system TCP connection
 // wide orbit 
@@ -10,6 +11,9 @@ let ip = "10.150.54.202";
 
 let streamingPort = 21117,
 		streamingIp = "10.150.55.108";
+
+// jumpgate configs
+let jumpUrl = 'https://10.150.55.212/live.json';
 
 // create initial client for connecting to automation system and listening for XML
 const client = new net.Socket();
@@ -51,25 +55,37 @@ function handleConnection(conn) {
       let duration = xmlObj.elements[0].elements[11].elements[0].text,
           cart = xmlObj.elements[0].elements[7].elements[0].text,
           category = xmlObj.elements[0].elements[6].elements[0].text,
-          cat = xmlObj.elements[0].elements[12].elements[0].text.toLowerCase();
+					cat = xmlObj.elements[0].elements[12].elements[0].text.toLowerCase();
+					
+					// jumpgate
+					request(jumpUrl, function(error, body, response) {
+						try {
+							var parsedJson = JSON.parse(body);
+							var sec = parsedJson.isaSEC;
+
+							// url to be sent out to streaming audio device
+							let url = `http://www.97xonline.com?autoID=${cart}&autoCat=${category}&sec=` + sec + `&dur=${duration}&cat=${cat}`
+				
+							console.log(`URL being sent to streaming audio device: ${url}`);
+							
+							// send data to another device via tcp
+							const streamingClient = new net.Socket();
+							try {
+								streamingClient.connect(streamingPort, streamingIp, function() {
+									console.log("Attemping to send URL to streaming device..."); 
+									streamingClient.write(url);	
+									streamingClient.destroy();
+								});
+							}
+							catch(error) {
+								console.log(error);
+							};
+						} catch(e) {
+							console.error(e);
+						}
+						
+					});
 			
-			// url to be sent out to streaming audio device
-      let url = `http://www.97xonline.com?autoID=${cart}&autoCat=${category}&sec=CHANGEME&dur=${duration}&cat=${cat}`
-			
-			console.log(`URL being sent to streaming audio device: ${url}`);
-			
-			// send data to another device via tcp
-			const streamingClient = new net.Socket();
-			try {
-				streamingClient.connect(streamingPort, streamingIp, function() {
-					console.log("Attemping to send URL to streaming device..."); 
-					streamingClient.write(url);	
-					streamingClient.destroy();
-				});
-			}
-			catch(error) {
-				console.log(error);
-			};
     }
 		catch(error) {
       console.log(error);
