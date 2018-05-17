@@ -32,15 +32,15 @@ let internalJumpUrl = 'http://10.150.55.212/live.json';
 //create initial client for connecting to automation system and listening for XML
 const client = new net.Socket();
 
-client.connect(port, ip, function() {
+client.connect(testPort, testIp, function() {
 	console.log('Automation client connected.')
 	handleConnection(client);
 });
 
 function handleConnection(conn) {
 	conn.on('data', onConnData);
-  conn.once('close', onConnClose);
-  conn.on('error', onConnError);
+  	conn.once('close', onConnClose);
+	conn.on('error', onConnError);
 
 	function onConnClose() {
 		console.log('Connection closed.');
@@ -59,68 +59,96 @@ function handleConnection(conn) {
 		try {
 			console.log('stringifying things');
 			let stringifiedBuffer = d.toString('utf8');
+			var stringArray = stringifiedBuffer.split('</nowplaying>');
 			
-			// helper that takes XML and converts to JSON
-      function xmlToJson(xml) {
-				console.log('running xml to json');
-        let convertedXml = convert.xml2json(stringifiedBuffer);
-        return JSON.parse(convertedXml);
-      };
-  
-      let xmlObj = xmlToJson();
-      let duration = xmlObj.elements[0].elements[11].elements[0].text,
-          cart = xmlObj.elements[0].elements[7].elements[0].text,
-          category = xmlObj.elements[0].elements[6].elements[0].text,
+			if (stringArray.length > 2) {
+				stringifiedBuffer = '<documents>' + stringifiedBuffer + '</documents>';
+			}
+
+	  		xmlToJson(stringifiedBuffer, function(xmlObj) {
+				let duration, cart, category, cat;
+
+				var nowPlayingArray= xmlObj.elements[0].elements;
+
+				if (xmlObj.elements[0].elements[0].name === 'nowplaying') {
+					console.log('array contained a nowplaying object');
+					console.log('array length: ', nowPlayingArray.length);
+					var newXmlObj = nowPlayingArray.filter(object => {
+						return object.elements[6].elements[0].text === 'IM2';
+					});
+					console.log('new array length: ', newXmlObj.length);
+
+					duration = newXmlObj[0].elements[11].elements[0].text;
+					cart = newXmlObj[0].elements[7].elements[0].text;
+					category = newXmlObj[0].elements[6].elements[0].text;
+					cat = newXmlObj[0].elements[12].elements[0].text;
+
+
+				} else {
+					duration = xmlObj.elements[0].elements[11].elements[0].text;
+          			cart = xmlObj.elements[0].elements[7].elements[0].text;
+          			category = xmlObj.elements[0].elements[6].elements[0].text;
 					cat = xmlObj.elements[0].elements[12].elements[0].text.toLowerCase();
-
-					var durationInSeconds = duration / 1000;
-					console.log('duration is: ', durationInSeconds);
-
-					if (durationInSeconds <= 10 && category == 'IM2') {
-						console.log('duration is less than or equal to 10 seconds');
-						console.log('requesting data');
-						request(internalJumpUrl, function(error, response, body) {
-							if (error) {
-								console.error(error);
-							}
-							try {
-								console.log('got the data,', typeof body);
-								var parse = JSON.parse(body);
-								console.log('parsed data successfully');
-								var sec = parse.isaSEC;
-
-								// url to be sent out to streaming audio device
-								let url = `http://www.97xonline.com?autoID=${cart}&autoCat=${category}&sec=` + sec + `&dur=${duration}&cat=${cat}`
-					
-								console.log(`URL being sent to streaming audio device: ${url}`);
-								
-								// send data to another device via tcp
-								const streamingClient = new net.Socket();
-								try {
-									console.log('connecting to streaming client');
-									streamingClient.connect(streamingPort, streamingIp, function() {
-										// streamingClient.connect(portPeekerPort, portPeekerIp, function() {
-										console.log("Attemping to send URL to streaming device..."); 
-										streamingClient.write(url);
-										console.log('successfully wrote to the client');
-										streamingClient.destroy();
-									});
-								}
-								catch(error) {
-									console.log(error);
-								};
-							} catch(e) {
-								console.error(e);
-							}
-							
-						});
-					} else {
-						console.log('duration is greater than 10 seconds');
-					}
+				}
+				
+				  
+						  var durationInSeconds = duration / 1000;
+						  console.log('duration is: ', durationInSeconds);
+	  
+						  if (durationInSeconds <= 10 && category == 'IM2') {
+							  console.log('duration is less than or equal to 10 seconds');
+							  console.log('requesting data');
+							  request(externalJumpUrl, function(error, response, body) {
+								  if (error) {
+									  console.error(error);
+								  }
+								  try {
+									  console.log('got the data,', typeof body);
+									  var parse = JSON.parse(body);
+									  console.log('parsed data successfully');
+									  var sec = parse.isaSEC;
+	  
+									  // url to be sent out to streaming audio device
+									  let url = `http://www.97xonline.com?autoID=${cart}&autoCat=${category}&sec=` + sec + `&dur=${duration}&cat=${cat}`
+						  
+									  console.log(`URL being sent to streaming audio device: ${url}`);
+									  
+									  // send data to another device via tcp
+									  const streamingClient = new net.Socket();
+									  try {
+										  console.log('connecting to streaming client');
+										  // streamingClient.connect(streamingPort, streamingIp, function() {
+											  streamingClient.connect(portPeekerPort, portPeekerIp, function() {
+											  console.log("Attemping to send URL to streaming device..."); 
+											  streamingClient.write(url);
+											  console.log('successfully wrote to the client');
+											  streamingClient.destroy();
+										  });
+									  }
+									  catch(error) {
+										  console.log(error);
+									  };
+								  } catch(e) {
+									  console.error(e);
+								  }
+								  
+							  });
+						  } else {
+							  console.log('duration is greater than 10 seconds or category is not IM2');
+						  }
+	  		});
+     
 			
     }
 		catch(error) {
       console.log(error);
-    }
+	}
+	
+	// helper that takes XML and converts to JSON
+	function xmlToJson(xml, cb) {
+		console.log('running xml to json');
+        let convertedXml = convert.xml2json(xml);
+        cb(JSON.parse(convertedXml));
+		};
 	}
 }
