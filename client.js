@@ -32,7 +32,7 @@ let internalJumpUrl = 'http://10.150.55.212/live.json';
 //create initial client for connecting to automation system and listening for XML
 const client = new net.Socket();
 
-client.connect(testPort, testIp, function() {
+client.connect(port, ip, function() {
 	console.log('Automation client connected.')
 	handleConnection(client);
 });
@@ -67,75 +67,34 @@ function handleConnection(conn) {
 
 	  		xmlToJson(stringifiedBuffer, function(xmlObj) {
 				let duration, cart, category, cat;
-
 				var nowPlayingArray= xmlObj.elements[0].elements;
 
 				if (xmlObj.elements[0].elements[0].name === 'nowplaying') {
-					console.log('array contained a nowplaying object');
 					console.log('array length: ', nowPlayingArray.length);
 					var newXmlObj = nowPlayingArray.filter(object => {
 						return object.elements[6].elements[0].text === 'IM2';
 					});
-					console.log('new array length: ', newXmlObj.length);
+					
+					//array is not empty, IM2 event exists
+					if (newXmlObj.length === 0) {
+						console.log('none of these were IM2 events')
+					} else {
+						duration = newXmlObj[0].elements[11].elements[0].text;
+						cart = newXmlObj[0].elements[7].elements[0].text;
+						category = newXmlObj[0].elements[6].elements[0].text;
+						cat = newXmlObj[0].elements[12].elements[0].text;
 
-					duration = newXmlObj[0].elements[11].elements[0].text;
-					cart = newXmlObj[0].elements[7].elements[0].text;
-					category = newXmlObj[0].elements[6].elements[0].text;
-					cat = newXmlObj[0].elements[12].elements[0].text;
-
-
+						sendTcpEvent(duration, cart, category, cat);
+					}
 				} else {
 					duration = xmlObj.elements[0].elements[11].elements[0].text;
           			cart = xmlObj.elements[0].elements[7].elements[0].text;
           			category = xmlObj.elements[0].elements[6].elements[0].text;
 					cat = xmlObj.elements[0].elements[12].elements[0].text.toLowerCase();
+
+					sendTcpEvent(duration, cart, category, cat);
 				}
-				
-				  
-						  var durationInSeconds = duration / 1000;
-						  console.log('duration is: ', durationInSeconds);
-	  
-						  if (durationInSeconds <= 10 && category == 'IM2') {
-							  console.log('duration is less than or equal to 10 seconds');
-							  console.log('requesting data');
-							  request(externalJumpUrl, function(error, response, body) {
-								  if (error) {
-									  console.error(error);
-								  }
-								  try {
-									  console.log('got the data,', typeof body);
-									  var parse = JSON.parse(body);
-									  console.log('parsed data successfully');
-									  var sec = parse.isaSEC;
-	  
-									  // url to be sent out to streaming audio device
-									  let url = `http://www.97xonline.com?autoID=${cart}&autoCat=${category}&sec=` + sec + `&dur=${duration}&cat=${cat}`
-						  
-									  console.log(`URL being sent to streaming audio device: ${url}`);
-									  
-									  // send data to another device via tcp
-									  const streamingClient = new net.Socket();
-									  try {
-										  console.log('connecting to streaming client');
-										  // streamingClient.connect(streamingPort, streamingIp, function() {
-											  streamingClient.connect(portPeekerPort, portPeekerIp, function() {
-											  console.log("Attemping to send URL to streaming device..."); 
-											  streamingClient.write(url);
-											  console.log('successfully wrote to the client');
-											  streamingClient.destroy();
-										  });
-									  }
-									  catch(error) {
-										  console.log(error);
-									  };
-								  } catch(e) {
-									  console.error(e);
-								  }
-								  
-							  });
-						  } else {
-							  console.log('duration is greater than 10 seconds or category is not IM2');
-						  }
+
 	  		});
      
 			
@@ -149,6 +108,55 @@ function handleConnection(conn) {
 		console.log('running xml to json');
         let convertedXml = convert.xml2json(xml);
         cb(JSON.parse(convertedXml));
-		};
+	};
+
+	function sendTcpEvent(duration, cart, category, cat) {
+		var durationInSeconds = duration / 1000;
+		console.log('duration is: ', durationInSeconds);
+
+		if (durationInSeconds <= 10 && category == 'IM2') {
+			console.log('duration is less than or equal to 10 seconds');
+			console.log('requesting data');
+			request(internalJumpUrl, function(error, response, body) {
+				if (error) {
+					console.error(error);
+				}
+				try {
+					console.log('got the data,', typeof body);
+					var parse = JSON.parse(body);
+					console.log('parsed data successfully');
+					var sec = parse.isaSEC;
+
+					// url to be sent out to streaming audio device
+					let url = `http://www.97xonline.com?autoID=${cart}&autoCat=${category}&sec=` + sec + `&dur=${duration}&cat=${cat}`
+		
+					console.log(`URL being sent to streaming audio device: ${url}`);
+					
+					// send data to another device via tcp
+					const streamingClient = new net.Socket();
+					try {
+						console.log('connecting to streaming client');
+						streamingClient.connect(streamingPort, streamingIp, function() {
+							// streamingClient.connect(portPeekerPort, portPeekerIp, function() {
+							console.log("Attemping to send URL to streaming device..."); 
+							streamingClient.write(url);
+							console.log('successfully wrote to the client');
+							streamingClient.destroy();
+						});
+					}
+					catch(error) {
+						console.log(error);
+					};
+				} catch(e) {
+					console.error(e);
+				}
+				
+			});
+		} else {
+			console.log('duration is greater than 10 seconds or category is not IM2');
+		}
+	}
+
+
 	}
 }
