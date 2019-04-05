@@ -4,24 +4,17 @@ The `client.js` script is designed to be started on a standalone machine on the 
 system that's available on a local IP.  It will listen for events from the automation system, filter
 them, and then pass them along on another TCP/IP server.
 
-## Current Files
+## Running
 
-These files are the current used system:
+`npm install` will install all the dependencies for the project
+`npm start` will run the project with the defaults
 
-## client.js
+In order to connect to a specific automation system you'll use:
 
-Connect to an automation system's TCP port, wait for events, filter them and forward them to a JumpGate.
+`npm start -- --ip=172.25.3.85 --port=5010`
 
-## app.js
+By default it will listen on `localhost:6999` but it you need to specify the interface on which it will
+be listening you can use:
 
-Start a TCP server on port 9000 and use it to relay the filtered events to a JumpGate.
+`npm start -- --ip=172.25.3.85 --port=5010 --hostip=127.0.0.1 --hostport=8080`
 
-## testserver.js
-
-A server that emulates a WideOrbit automation system and will spit out XML every five seconds for testing purposes.
-
-
-## Plans
-
-We need to roll the WideOrbit listener and JumpGate client together and have the pipeline directly 
-proxy the XML back to the JumpGate.

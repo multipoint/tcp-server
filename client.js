@@ -4,27 +4,26 @@ type node C:\Quu2Go\client.js
 and hit Enter
 */
 const net = require('net');
-//const convert = require('xml-js');
 const convert = require('xml2js');
 const request = require('request');
+const argv = require('minimist')(process.argv.slice(2));
 
 // config vars for automation system TCP connection
 // wide orbit 
-const port = 5010, //11112; 
-    ip = "172.25.3.85"; //"10.150.54.202";  
+const port = argv.port || 5010,
+    	ip = argv.ip || "172.25.3.85";
 
 // config vars for streaming audio device connection
-const streamingPort = 6999, //21117
-    streamingIp = "172.25.3.68"; //"10.150.55.108";
+const streamingPort = argv.hostport || 6999,
+      streamingIp = argv.hostip || "127.0.0.1";
 
 const cutoffDurationInMs = 14000,
-    delayDurationInMs = 14000,
-    maxEventsToSendOut = 3;
+	    delayDurationInMs = 14000,
+  	  maxEventsToSendOut = 3;
 
 let futureEvents = true;
 let dropCategoriesArr = [];
 let sendArr = [];
-
 
 //Create initial client for connecting to automation server and listening for XML event batches.
 const automationClient = new net.Socket();

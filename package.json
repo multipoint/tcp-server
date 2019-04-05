@@ -1,17 +1,18 @@
 {
-  "name": "tcp-server",
+  "name": "wideorbit-filter",
   "version": "1.0.0",
   "description": "",
-  "main": "app.js",
+  "main": "client.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node client.js"
   },
-  "author": "",
-  "license": "ISC",
   "dependencies": {
+    "minimist": "^1.2.0",
     "net": "^1.0.2",
     "npm": "^5.8.0",
     "request": "^2.85.0",
-    "xml-js": "^1.6.2"
+    "xml-js": "^1.6.2",
+    "xml2js": "^0.4.19"
   }
 }
